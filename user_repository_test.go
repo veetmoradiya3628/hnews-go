@@ -66,6 +66,48 @@ func TestSQLUserRepository_Authentication_WrongPassword(t *testing.T) {
 	assert.Equal(t, ErrInvalidCredential, err)
 }
 
+func TestSQLUserRepository_GetUserByEmailWithProfile(t *testing.T) {
+	defer cleanupTestData(t)
+
+	repo := NewSQLUserRepository(testDB)
+	userID, err := repo.CreateUser("John Doe", "john@doe.com", "testpassword", "avatar")
+	assert.Nil(t, err)
+	assert.Greater(t, userID, 0)
+
+	userData, err := repo.GetUserByEmailWithProfile("john@doe.com")
+	assert.NoError(t, err)
+	assert.NotNil(t, userData)
+	assert.NotZero(t, userData.Profile.UserID)
+}
+
+func TestSQLUserRepository_GetUsers(t *testing.T) {
+	defer cleanupTestData(t)
+
+	repo := NewSQLUserRepository(testDB)
+
+	userID1, err := repo.CreateUser("John Doe", "john@doe.com", "testpassword", "avatar1")
+	assert.NoError(t, err)
+	assert.Greater(t, userID1, 0)
+
+	userID2, err := repo.CreateUser("Jane Doe", "jane@doe.com", "testpassword", "avatar2")
+	assert.NoError(t, err)
+	assert.Greater(t, userID2, 0)
+
+	users, err := repo.GetUsers()
+
+	assert.NoError(t, err)
+	assert.NotNil(t, users)
+	assert.Len(t, users, 2)
+
+	assert.NotZero(t, users[0].ID)
+	assert.NotEmpty(t, users[0].Email)
+	assert.NotZero(t, users[0].Profile.UserID)
+
+	assert.NotZero(t, users[1].ID)
+	assert.NotEmpty(t, users[1].Email)
+	assert.NotZero(t, users[1].Profile.UserID)
+}
+
 func generateString(n int) string {
 	buf := make([]byte, n)
 	for i := 0; i < n; i++ {
