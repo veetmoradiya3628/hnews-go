@@ -2,13 +2,18 @@ package main
 
 import (
 	"database/sql"
+	"io"
+	"log"
 	"os"
 	"testing"
+	"time"
 
+	"github.com/golangcollege/sessions"
 	"github.com/stretchr/testify/assert"
 )
 
 var testDB *sql.DB
+var testApp *application
 
 func TestMain(m *testing.M) {
 	var err error
@@ -19,12 +24,29 @@ func TestMain(m *testing.M) {
 	if err := testDB.Ping(); err != nil {
 		panic(err)
 	}
+	testApp = setupApp(testDB)
 	if err = setupTestSchema(testDB); err != nil {
 		panic(err)
 	}
 	code := m.Run()
 	testDB.Close()
 	os.Exit(code)
+}
+
+func setupApp(db *sql.DB) *application {
+	sess := sessions.New([]byte("super-secret-session-key-very-long-32-bytes"))
+	sess.Lifetime = 24 * time.Hour
+	app := &application{
+		errorLog:    log.New(io.Discard, "", 0),
+		infoLog:     log.New(io.Discard, "", 0),
+		userRepo:    NewSQLUserRepository(db),
+		postRepo:    NewSQLPostRepository(db),
+		templateDir: "./templates",
+		publicPath:  "./public",
+		session:     sess,
+	}
+	app.tp = NewTemplateRenderer(app.templateDir, false)
+	return app
 }
 
 func setupTestSchema(db *sql.DB) error {
@@ -38,7 +60,7 @@ func setupTestSchema(db *sql.DB) error {
 );
 
 
-CREATE TABLE profile (
+CREATE TABLE profiles (
      user_id INTEGER PRIMARY KEY REFERENCES users(user_id) ON DELETE CASCADE,
      avatar TEXT NOT NULL,
      created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
@@ -75,7 +97,7 @@ CREATE TABLE votes (
 
 func cleanupTestData(t *testing.T) {
 	tables := []string{
-		"profile",
+		"profiles",
 		"votes",
 		"comments",
 		"posts",

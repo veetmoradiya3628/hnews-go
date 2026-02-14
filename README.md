@@ -16,3 +16,11 @@ curl http://localhost:8080
 ## REQUIREMENTS
 - GO 1.25
 - SQLite
+
+- To run unit test with coverage
+
+```bash
+go test -coverprofile=coverage
+
+go tool cover -html=coverage  
+```
